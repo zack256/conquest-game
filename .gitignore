@@ -1,0 +1,10 @@
+# Basically trying to ignore everything except scripts.
+
+*
+!.gitignore
+
+!/Assets
+!/Assets/Scripts
+!/Assets/Scripts/*
+
+*.cs.meta
