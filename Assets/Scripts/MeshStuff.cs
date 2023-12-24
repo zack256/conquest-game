@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MeshStuff : MonoBehaviour
-{
+public static class MeshStuff {
 
-    int Mod (int a, int b) {
+    static int Mod (int a, int b) {
         int r = a % b;
         return r < 0 ? r + b : r;
     }
 
-    float SumOfArray (float[] l) {
+    static float SumOfArray (float[] l) {
         float total = 0;
         for (int i = 0; i < l.Length; i++) {
             total += l[i];
@@ -18,7 +17,7 @@ public class MeshStuff : MonoBehaviour
         return total;
     }
 
-    float FindAngle (float sinTheta, float cosTheta) {
+    static float FindAngle (float sinTheta, float cosTheta) {
         // Given a sin and cos of an angle, this should return the
         // correct angle in the correct quadrant.
         float presumedTheta = Mathf.Asin(sinTheta);
@@ -33,7 +32,7 @@ public class MeshStuff : MonoBehaviour
         }
     }
 
-    float[] GetInteriorAngles (List<Vector2> vertices) {
+    static float[] GetInteriorAngles (List<Vector2> vertices) {
         // Calculates the interior angle in radians of each
         // vertex's interior angle.
 
@@ -77,7 +76,7 @@ public class MeshStuff : MonoBehaviour
         return theta;
     }
 
-    List<bool> ClassifyConvexVertices (List<Vector2> vertices) {
+    static List<bool> ClassifyConvexVertices (List<Vector2> vertices) {
         // Classifies verticies as convex [interior] angles or not,
         // where convex means < 180 degrees.
         int n = vertices.Count;
@@ -89,11 +88,11 @@ public class MeshStuff : MonoBehaviour
         return isConvex;
     }
 
-    float CalcSlope (Vector2 A, Vector2 B) {
+    static float CalcSlope (Vector2 A, Vector2 B) {
         return (B.y - A.y) / (B.x - A.x);
     }
 
-    bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
+    static bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
         // Checks if a point P is inside the triangle ABC. Edge inclusive.
         // TODO: Make work for vertical lines.
 
@@ -135,7 +134,7 @@ public class MeshStuff : MonoBehaviour
         return true;
     }
 
-    bool VertexIsEar (List<Vector2> vertices, List<bool> isConvex, int idx) {
+    static bool VertexIsEar (List<Vector2> vertices, List<bool> isConvex, int idx) {
         // An acceptable test for checking if a vertex is an ear or not is
         // if the vertex [interior angle] is convex and the the triangle formed
         // by it an its neighbors doesn't contain any other vertices of the
@@ -158,7 +157,7 @@ public class MeshStuff : MonoBehaviour
         return true;
     }
 
-    List<int> ListOfNumbersInOrder (int n) {
+    static List<int> ListOfNumbersInOrder (int n) {
         List<int> l = new List<int>();
         for (int i = 0; i < n; i++) {
             l.Add(i);
@@ -166,7 +165,7 @@ public class MeshStuff : MonoBehaviour
         return l;
     }
 
-    int[] FindTrianglesForMesh (List<Vector2> vertices0) {
+    static int[] FindTrianglesForMesh (List<Vector2> vertices0) {
         // Partitions a polygon (described by [vertices]) into n-2 triangles,
         // where [n] is the number of vertices. Uses the ear clipping method,
         // where until we reach 3 sides, we take away 2 edges and add another
@@ -216,7 +215,6 @@ public class MeshStuff : MonoBehaviour
                     idxs.RemoveAt(j);
                     break;
 
-
                 }
             }
         }
@@ -224,7 +222,7 @@ public class MeshStuff : MonoBehaviour
         return triangles;
     }
 
-    Vector2[] CalcNewUVs (List<Vector2> vertices) {
+    static Vector2[] CalcNewUVs (List<Vector2> vertices) {
         int n = vertices.Count;
         Vector2[] newUVs = new Vector2[n];
         for (int i = 0; i < n; i++) {
@@ -233,7 +231,7 @@ public class MeshStuff : MonoBehaviour
         return newUVs;
     }
 
-    Vector3[] Vector2ListToVector3Array (List<Vector2> l) {
+    static Vector3[] Vector2ListToVector3Array (List<Vector2> l) {
         int n = l.Count;
         Vector3[] res = new Vector3[n];
         for (int i = 0; i < n; i++) {
@@ -242,7 +240,7 @@ public class MeshStuff : MonoBehaviour
         return res;
     }
 
-    public void RedoMesh (List<Vector2> vertices) {
+    static public void RedoMesh (GameObject gameObject, List<Vector2> vertices) {
         // Given a list of 2D coordinates, replaces the mesh of this object
         // with one in the shape described by the vertices.
         Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
@@ -251,21 +249,20 @@ public class MeshStuff : MonoBehaviour
         mesh.triangles = FindTrianglesForMesh(vertices);
         mesh.uv = CalcNewUVs(vertices);
         mesh.RecalculateNormals();
-        Destroy(gameObject.GetComponent<MeshCollider>());
+        UnityEngine.Object.Destroy(gameObject.GetComponent<MeshCollider>());
         MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = mesh;
     }
 
-    List<Vector2> Vector2ListFromFloatList (List<float> l) {
+    static List<Vector2> Vector2ListFromFloatList (List<float> l) {
         List<Vector2> res = new List<Vector2>();
         for (int i = 0; i < l.Count / 2; i++) {
             res.Add(new Vector2(l[2 * i], l[2 * i + 1]));
         }
-        print(res.Count);
-        print(res[0]);
         return res;
     }
 
+    /**
     List<Vector2> triangle = new List<Vector2> {
         new Vector2(0, 0),
         new Vector2(3, 0),
@@ -301,9 +298,6 @@ public class MeshStuff : MonoBehaviour
     List<float> arch = new List<float> {
         7, 8, 10, 14, 16, 11, 13.5f, 6.5f, 12, 7.5f, 13, 10, 11, 11, 9, 7
     };
-
-    void Start () {
-        RedoMesh(Vector2ListFromFloatList(arch));
-    }
+    **/
 
 }
