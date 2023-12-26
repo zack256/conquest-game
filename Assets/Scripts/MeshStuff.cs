@@ -92,9 +92,49 @@ public static class MeshStuff {
         return (B.y - A.y) / (B.x - A.x);
     }
 
+    static int PointIsInTriangleHelper (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
+        // O: P is definetly not in ABC (P on a)
+        // 1: P is definetly in ABC.
+        // -1: P might be in ABC (on different side than A for side a though)
+
+        if (B.x == C.x) {
+            // Vertical line.
+            if (
+                (P.x == B.x)
+                &&
+                (
+                    (B.y < C.y && P.y >= B.y && P.y <= C.y)
+                ||
+                    (C.y < B.y && P.y >= C.y && P.y <= B.y)
+                )
+            ) return 1;
+            if (Mathf.Sign(P.x - B.x) != Mathf.Sign(A.x - B.x)) return 0;
+            return -1;
+        }
+
+        float aSlope = CalcSlope(B, C);
+        float aYInt = B.y - aSlope * B.x;
+        float aRes = P.y - (aSlope * P.x + aYInt);
+        if (aRes == 0) return 1;
+        float aaRes = A.y - (aSlope * A.x + aYInt);
+        if (Mathf.Sign(aRes) != Mathf.Sign(aaRes)) return 0;
+        return -1;
+    }
+
+    static public bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
+        int aRes = PointIsInTriangleHelper(A, B, C, P);
+        int bRes = PointIsInTriangleHelper(B, C, A, P);
+        int cRes = PointIsInTriangleHelper(C, A, B, P);
+        if (aRes == 1 || bRes == 1 || cRes == 1) return true;
+        return aRes != 0 && bRes != 0 && cRes != 0;
+    }
+
+    /**
     static bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
         // Checks if a point P is inside the triangle ABC. Edge inclusive.
         // TODO: Make work for vertical lines.
+
+        // Helpful: The triangle has points A, B, and C, and sides a, b, and c.
 
         float aSlope = CalcSlope(B, C);
         float bSlope = CalcSlope(C, A);
@@ -114,9 +154,9 @@ public static class MeshStuff {
             return true;
         }
 
-        // Now, we check which side of the line BC P is on.
+        // Now, we check which side of the line BC (a) P is on.
         // If it's on the same side as A, and on the same sides
-        // as corresponding CA and AB, then we mark it as inside
+        // as corresponding CA (b) and AB (c), then we mark it as inside
         // the triangle ABC.
         float aaRes = A.y - (aSlope * A.x + aYInt);
         if (Mathf.Sign(aRes) != Mathf.Sign(aaRes)) {
@@ -133,6 +173,7 @@ public static class MeshStuff {
 
         return true;
     }
+    **/
 
     static bool VertexIsEar (List<Vector2> vertices, List<bool> isConvex, int idx) {
         // An acceptable test for checking if a vertex is an ear or not is

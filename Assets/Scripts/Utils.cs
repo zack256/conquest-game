@@ -16,4 +16,22 @@ public class Utils {
         return newL;
     }
 
+    public static void PrintArray<T> (T[] arr) {
+        string s = "";
+        for (int i = 0; i < arr.Length; i++) {
+            s += arr[i];
+            s += ", ";
+        }
+        Debug.Log(s);
+    }
+
+    public static void PrintList<T> (List<T> l) {
+        string s = "";
+        for (int i = 0; i < l.Count; i++) {
+            s += l[i];
+            s += ", ";
+        }
+        Debug.Log(s);
+    }
+
 }
