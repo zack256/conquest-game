@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -121,59 +122,13 @@ public static class MeshStuff {
         return -1;
     }
 
-    static public bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
+    static bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
         int aRes = PointIsInTriangleHelper(A, B, C, P);
         int bRes = PointIsInTriangleHelper(B, C, A, P);
         int cRes = PointIsInTriangleHelper(C, A, B, P);
         if (aRes == 1 || bRes == 1 || cRes == 1) return true;
         return aRes != 0 && bRes != 0 && cRes != 0;
     }
-
-    /**
-    static bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
-        // Checks if a point P is inside the triangle ABC. Edge inclusive.
-        // TODO: Make work for vertical lines.
-
-        // Helpful: The triangle has points A, B, and C, and sides a, b, and c.
-
-        float aSlope = CalcSlope(B, C);
-        float bSlope = CalcSlope(C, A);
-        float cSlope = CalcSlope(A, B);
-
-        float aYInt = B.y - aSlope * B.x;
-        float bYInt = C.y - bSlope * C.x;
-        float cYInt = A.y - cSlope * A.x;
-
-        // Checks if P is on the edge of the triangle.
-        // I'm aware that I check floating point inaccuracies in some
-        // places and not others...maybe...
-        float aRes = P.y - (aSlope * P.x + aYInt);
-        float bRes = P.y - (bSlope * P.x + bYInt);
-        float cRes = P.y - (cSlope * P.x + cYInt);
-        if (aRes == 0 || bRes == 0 || cRes == 0) {
-            return true;
-        }
-
-        // Now, we check which side of the line BC (a) P is on.
-        // If it's on the same side as A, and on the same sides
-        // as corresponding CA (b) and AB (c), then we mark it as inside
-        // the triangle ABC.
-        float aaRes = A.y - (aSlope * A.x + aYInt);
-        if (Mathf.Sign(aRes) != Mathf.Sign(aaRes)) {
-            return false;
-        }
-        float bbRes = B.y - (bSlope * B.x + bYInt);
-        if (Mathf.Sign(bRes) != Mathf.Sign(bbRes)) {
-            return false;
-        }
-        float ccRes = C.y - (cSlope * C.x + cYInt);
-        if (Mathf.Sign(cRes) != Mathf.Sign(ccRes)) {
-            return false;
-        }
-
-        return true;
-    }
-    **/
 
     static bool VertexIsEar (List<Vector2> vertices, List<bool> isConvex, int idx) {
         // An acceptable test for checking if a vertex is an ear or not is
@@ -281,7 +236,7 @@ public static class MeshStuff {
         return res;
     }
 
-    static public void RedoMesh (GameObject gameObject, List<Vector2> vertices) {
+    static void RedoMesh (GameObject gameObject, List<Vector2> vertices) {
         // Given a list of 2D coordinates, replaces the mesh of this object
         // with one in the shape described by the vertices.
         Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
@@ -295,50 +250,17 @@ public static class MeshStuff {
         meshCollider.sharedMesh = mesh;
     }
 
-    static List<Vector2> Vector2ListFromFloatList (List<float> l) {
-        List<Vector2> res = new List<Vector2>();
-        for (int i = 0; i < l.Count / 2; i++) {
-            res.Add(new Vector2(l[2 * i], l[2 * i + 1]));
-        }
-        return res;
+    public static void RedoMesh (GameObject gameObject, GJObj g) {
+        List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.features[0].geometry.coordinates[0]);
+        if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
+        if (
+            (vertices[0].x != vertices[vertices.Count - 1].x)
+            ||
+            (vertices[0].y != vertices[vertices.Count - 1].y)
+        ) throw new Exception("Invalid GeoJSON coordinates- first coordinate must equal the last for a polygon.");
+        List<Vector2> newVertices = new List<Vector2>(vertices);
+        newVertices.RemoveAt(newVertices.Count - 1);
+        RedoMesh(gameObject, newVertices);
     }
-
-    /**
-    List<Vector2> triangle = new List<Vector2> {
-        new Vector2(0, 0),
-        new Vector2(3, 0),
-        new Vector2(3, 4),
-    };
-    List<Vector2> convexQuadrilateral = new List<Vector2> {
-        new Vector2(-3, -2),
-        new Vector2(6, -2),
-        new Vector2(8, 4),
-        new Vector2(2, 6),
-    };
-    List<Vector2> kite = new List<Vector2> {
-        new Vector2(-2, -3),
-        new Vector2(0, 0),
-        new Vector2(2, -4),
-        new Vector2(0, 6),
-    };
-    List<Vector2> reversedKite = new List<Vector2> {
-        new Vector2(-2, -3),
-        new Vector2(0, 6),
-        new Vector2(2, -4),
-        new Vector2(0, 0),
-    };
-    List<float> advancedKite = new List<float> {
-        0, 5,
-        -5, -4,
-        -3, -2,
-        -1, -1,
-        1, -1,
-        3, -2,
-        5, -4
-    };
-    List<float> arch = new List<float> {
-        7, 8, 10, 14, 16, 11, 13.5f, 6.5f, 12, 7.5f, 13, 10, 11, 11, 9, 7
-    };
-    **/
 
 }
