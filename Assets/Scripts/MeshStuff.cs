@@ -236,7 +236,8 @@ public static class MeshStuff {
         return res;
     }
 
-    static void RedoMesh (GameObject gameObject, List<Vector2> vertices) {
+    /**
+    public static void RedoMesh (GameObject gameObject, List<Vector2> vertices) {
         // Given a list of 2D coordinates, replaces the mesh of this object
         // with one in the shape described by the vertices.
         Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
@@ -249,7 +250,77 @@ public static class MeshStuff {
         MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = mesh;
     }
+    **/
 
+    public static void RedoMesh (GameObject gameObject, List<List<List<Vector2>>> vertices) {
+
+        Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
+        mesh.Clear();
+
+        List<Vector2> newVertices = new List<Vector2>();
+        List<int> newTriangles = new List<int>();
+
+        for (int i = 0; i < vertices.Count; i++) {
+            List<int> trianglesRes = new List<int>(FindTrianglesForMesh(vertices[i][0]));
+            for (int j = 0; j < trianglesRes.Count; j++) {
+                trianglesRes[j] += newVertices.Count;
+            }
+            newVertices.AddRange(vertices[i][0]);
+            newTriangles.AddRange(trianglesRes);
+        }
+
+        mesh.vertices = Vector2ListToVector3Array(newVertices);
+        mesh.triangles = newTriangles.ToArray();
+        mesh.uv = CalcNewUVs(newVertices);
+        mesh.RecalculateNormals();
+        UnityEngine.Object.Destroy(gameObject.GetComponent<MeshCollider>());
+        MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
+        meshCollider.sharedMesh = mesh;
+    }
+
+    /**
+    public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g) {
+        List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.coordinates[0]);
+        if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
+        if (
+            (vertices[0].x != vertices[vertices.Count - 1].x)
+            ||
+            (vertices[0].y != vertices[vertices.Count - 1].y)
+        ) throw new Exception("Invalid GeoJSON coordinates- first coordinate must equal the last for a polygon.");
+        List<Vector2> newVertices = new List<Vector2>(vertices);
+        newVertices.RemoveAt(newVertices.Count - 1);
+        RedoMesh(gameObject, newVertices);
+    }
+    **/
+
+    public static void RedoMesh (GameObject gameObject, GJMultiPolygonGeometry g) {
+
+        List<List<List<Vector2>>> vertices = new List<List<List<Vector2>>>();
+
+        List<List<List<List<float>>>> coords = g.coordinates;
+        for (int i = 0; i < coords.Count; i++) {
+            vertices.Add(new List<List<Vector2>>());
+            for (int j = 0; j < coords[i].Count; j++) {
+                vertices[i].Add(new List<Vector2>());
+                for (int k = 0; k < coords[i][j].Count; k++) {
+                    vertices[i][j].Add(new Vector2(coords[i][j][k][0], coords[i][j][k][1]));
+                }
+                vertices[i][j].RemoveAt(vertices[i][j].Count - 1);
+            }
+        }
+
+        // if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
+        // if (
+        //     (vertices[0].x != vertices[vertices.Count - 1].x)
+        //     ||
+        //     (vertices[0].y != vertices[vertices.Count - 1].y)
+        // ) throw new Exception("Invalid GeoJSON coordinates- first coordinate must equal the last for a polygon.");
+        // List<Vector2> newVertices = new List<Vector2>(vertices);
+        // newVertices.RemoveAt(newVertices.Count - 1);
+        RedoMesh(gameObject, vertices);
+    }
+
+    /**
     public static void RedoMesh (GameObject gameObject, GJObj g) {
         List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.features[0].geometry.coordinates[0]);
         if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
@@ -262,5 +333,6 @@ public static class MeshStuff {
         newVertices.RemoveAt(newVertices.Count - 1);
         RedoMesh(gameObject, newVertices);
     }
+    **/
 
 }
