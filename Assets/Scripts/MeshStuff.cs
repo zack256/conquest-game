@@ -161,7 +161,7 @@ public static class MeshStuff {
         return l;
     }
 
-    static int[] FindTrianglesForMesh (List<Vector2> vertices0) {
+    static int[] FindTrianglesForPolygon (List<Vector2> vertices0) {
         // Partitions a polygon (described by [vertices]) into n-2 triangles,
         // where [n] is the number of vertices. Uses the ear clipping method,
         // where until we reach 3 sides, we take away 2 edges and add another
@@ -236,32 +236,15 @@ public static class MeshStuff {
         return res;
     }
 
-    /**
-    public static void RedoMesh (GameObject gameObject, List<Vector2> vertices) {
-        // Given a list of 2D coordinates, replaces the mesh of this object
-        // with one in the shape described by the vertices.
-        Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
-        mesh.Clear();
-        mesh.vertices = Vector2ListToVector3Array(vertices);
-        mesh.triangles = FindTrianglesForMesh(vertices);
-        mesh.uv = CalcNewUVs(vertices);
-        mesh.RecalculateNormals();
-        UnityEngine.Object.Destroy(gameObject.GetComponent<MeshCollider>());
-        MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
-        meshCollider.sharedMesh = mesh;
-    }
-    **/
-
     public static void RedoMesh (GameObject gameObject, List<List<List<Vector2>>> vertices) {
-
-        Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
-        mesh.Clear();
+        // Given: a MultiPolygon representation of the desired mesh, but
+        // with Vector2s.
 
         List<Vector2> newVertices = new List<Vector2>();
         List<int> newTriangles = new List<int>();
 
         for (int i = 0; i < vertices.Count; i++) {
-            List<int> trianglesRes = new List<int>(FindTrianglesForMesh(vertices[i][0]));
+            List<int> trianglesRes = new List<int>(FindTrianglesForPolygon(vertices[i][0]));
             for (int j = 0; j < trianglesRes.Count; j++) {
                 trianglesRes[j] += newVertices.Count;
             }
@@ -269,6 +252,8 @@ public static class MeshStuff {
             newTriangles.AddRange(trianglesRes);
         }
 
+        Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
+        mesh.Clear();
         mesh.vertices = Vector2ListToVector3Array(newVertices);
         mesh.triangles = newTriangles.ToArray();
         mesh.uv = CalcNewUVs(newVertices);
@@ -278,61 +263,39 @@ public static class MeshStuff {
         meshCollider.sharedMesh = mesh;
     }
 
-    /**
     public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g) {
         List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.coordinates[0]);
-        if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
-        if (
-            (vertices[0].x != vertices[vertices.Count - 1].x)
-            ||
-            (vertices[0].y != vertices[vertices.Count - 1].y)
-        ) throw new Exception("Invalid GeoJSON coordinates- first coordinate must equal the last for a polygon.");
+        Utils.JSONPolygonRingIsValid(vertices);
         List<Vector2> newVertices = new List<Vector2>(vertices);
         newVertices.RemoveAt(newVertices.Count - 1);
-        RedoMesh(gameObject, newVertices);
+        // RedoMesh(gameObject, newVertices);
+        List<List<List<Vector2>>> multiPolygonForm = new List<List<List<Vector2>>>();
+        multiPolygonForm.Add(new List<List<Vector2>>());
+        multiPolygonForm[0].Add(newVertices);
+        RedoMesh(gameObject, multiPolygonForm);
     }
-    **/
 
     public static void RedoMesh (GameObject gameObject, GJMultiPolygonGeometry g) {
 
         List<List<List<Vector2>>> vertices = new List<List<List<Vector2>>>();
-
         List<List<List<List<float>>>> coords = g.coordinates;
+
+        // Iterating thru polygons
         for (int i = 0; i < coords.Count; i++) {
             vertices.Add(new List<List<Vector2>>());
+            // Iterating thru rings
             for (int j = 0; j < coords[i].Count; j++) {
                 vertices[i].Add(new List<Vector2>());
+                // Iterating thru coordinates
                 for (int k = 0; k < coords[i][j].Count; k++) {
                     vertices[i][j].Add(new Vector2(coords[i][j][k][0], coords[i][j][k][1]));
                 }
+                Utils.JSONPolygonRingIsValid(vertices[i][j]);
                 vertices[i][j].RemoveAt(vertices[i][j].Count - 1);
             }
         }
 
-        // if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
-        // if (
-        //     (vertices[0].x != vertices[vertices.Count - 1].x)
-        //     ||
-        //     (vertices[0].y != vertices[vertices.Count - 1].y)
-        // ) throw new Exception("Invalid GeoJSON coordinates- first coordinate must equal the last for a polygon.");
-        // List<Vector2> newVertices = new List<Vector2>(vertices);
-        // newVertices.RemoveAt(newVertices.Count - 1);
         RedoMesh(gameObject, vertices);
     }
-
-    /**
-    public static void RedoMesh (GameObject gameObject, GJObj g) {
-        List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.features[0].geometry.coordinates[0]);
-        if (vertices.Count < 4) throw new Exception("Invalid GeoJSON coordinates- must have at least 4 coordinates for a polygon.");
-        if (
-            (vertices[0].x != vertices[vertices.Count - 1].x)
-            ||
-            (vertices[0].y != vertices[vertices.Count - 1].y)
-        ) throw new Exception("Invalid GeoJSON coordinates- first coordinate must equal the last for a polygon.");
-        List<Vector2> newVertices = new List<Vector2>(vertices);
-        newVertices.RemoveAt(newVertices.Count - 1);
-        RedoMesh(gameObject, newVertices);
-    }
-    **/
 
 }
