@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class MeshStuff {
-
+public class GeometryWork
+{
     static int Mod (int a, int b) {
         int r = a % b;
         return r < 0 ? r + b : r;
     }
-
     static float SumOfArray (float[] l) {
         float total = 0;
         for (int i = 0; i < l.Length; i++) {
@@ -17,7 +15,6 @@ public static class MeshStuff {
         }
         return total;
     }
-
     static float FindAngle (float sinTheta, float cosTheta) {
         // Given a sin and cos of an angle, this should return the
         // correct angle in the correct quadrant.
@@ -32,7 +29,6 @@ public static class MeshStuff {
             }
         }
     }
-
     static float[] GetInteriorAngles (List<Vector2> vertices) {
         // Calculates the interior angle in radians of each
         // vertex's interior angle.
@@ -76,7 +72,6 @@ public static class MeshStuff {
 
         return theta;
     }
-
     static List<bool> ClassifyConvexVertices (List<Vector2> vertices) {
         // Classifies verticies as convex [interior] angles or not,
         // where convex means < 180 degrees.
@@ -88,11 +83,9 @@ public static class MeshStuff {
         }
         return isConvex;
     }
-
     static float CalcSlope (Vector2 A, Vector2 B) {
         return (B.y - A.y) / (B.x - A.x);
     }
-
     static int PointIsInTriangleHelper (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
         // O: P is definetly not in ABC (P on a)
         // 1: P is definetly in ABC.
@@ -121,7 +114,6 @@ public static class MeshStuff {
         if (Mathf.Sign(aRes) != Mathf.Sign(aaRes)) return 0;
         return -1;
     }
-
     static bool PointIsInTriangle (Vector2 A, Vector2 B, Vector2 C, Vector2 P) {
         int aRes = PointIsInTriangleHelper(A, B, C, P);
         int bRes = PointIsInTriangleHelper(B, C, A, P);
@@ -129,7 +121,6 @@ public static class MeshStuff {
         if (aRes == 1 || bRes == 1 || cRes == 1) return true;
         return aRes != 0 && bRes != 0 && cRes != 0;
     }
-
     static bool VertexIsEar (List<Vector2> vertices, List<bool> isConvex, int idx) {
         // An acceptable test for checking if a vertex is an ear or not is
         // if the vertex [interior angle] is convex and the the triangle formed
@@ -152,7 +143,6 @@ public static class MeshStuff {
         }
         return true;
     }
-
     static List<int> ListOfNumbersInOrder (int n) {
         List<int> l = new List<int>();
         for (int i = 0; i < n; i++) {
@@ -160,8 +150,7 @@ public static class MeshStuff {
         }
         return l;
     }
-
-    static int[] FindTrianglesForPolygon (List<Vector2> vertices0) {
+    public static int[] FindTrianglesForPolygon (List<Vector2> vertices0) {
         // Partitions a polygon (described by [vertices]) into n-2 triangles,
         // where [n] is the number of vertices. Uses the ear clipping method,
         // where until we reach 3 sides, we take away 2 edges and add another
@@ -217,85 +206,4 @@ public static class MeshStuff {
 
         return triangles;
     }
-
-    static Vector2[] CalcNewUVs (List<Vector2> vertices) {
-        int n = vertices.Count;
-        Vector2[] newUVs = new Vector2[n];
-        for (int i = 0; i < n; i++) {
-            newUVs[i] = new Vector2(vertices[i].x, vertices[i].y);
-        }
-        return newUVs;
-    }
-
-    static Vector3[] Vector2ListToVector3Array (List<Vector2> l) {
-        int n = l.Count;
-        Vector3[] res = new Vector3[n];
-        for (int i = 0; i < n; i++) {
-            res[i] = new Vector3(l[i].x, l[i].y, 0);
-        }
-        return res;
-    }
-
-    public static void RedoMesh (GameObject gameObject, List<List<List<Vector2>>> vertices) {
-        // Given: a MultiPolygon representation of the desired mesh, but
-        // with Vector2s.
-
-        List<Vector2> newVertices = new List<Vector2>();
-        List<int> newTriangles = new List<int>();
-
-        for (int i = 0; i < vertices.Count; i++) {
-            List<int> trianglesRes = new List<int>(FindTrianglesForPolygon(vertices[i][0]));
-            for (int j = 0; j < trianglesRes.Count; j++) {
-                trianglesRes[j] += newVertices.Count;
-            }
-            newVertices.AddRange(vertices[i][0]);
-            newTriangles.AddRange(trianglesRes);
-        }
-
-        Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
-        mesh.Clear();
-        mesh.vertices = Vector2ListToVector3Array(newVertices);
-        mesh.triangles = newTriangles.ToArray();
-        mesh.uv = CalcNewUVs(newVertices);
-        mesh.RecalculateNormals();
-        UnityEngine.Object.Destroy(gameObject.GetComponent<MeshCollider>());
-        MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
-        meshCollider.sharedMesh = mesh;
-    }
-
-    public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g) {
-        List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.coordinates[0]);
-        Utils.JSONPolygonRingIsValid(vertices);
-        List<Vector2> newVertices = new List<Vector2>(vertices);
-        newVertices.RemoveAt(newVertices.Count - 1);
-        // RedoMesh(gameObject, newVertices);
-        List<List<List<Vector2>>> multiPolygonForm = new List<List<List<Vector2>>>();
-        multiPolygonForm.Add(new List<List<Vector2>>());
-        multiPolygonForm[0].Add(newVertices);
-        RedoMesh(gameObject, multiPolygonForm);
-    }
-
-    public static void RedoMesh (GameObject gameObject, GJMultiPolygonGeometry g) {
-
-        List<List<List<Vector2>>> vertices = new List<List<List<Vector2>>>();
-        List<List<List<List<float>>>> coords = g.coordinates;
-
-        // Iterating thru polygons
-        for (int i = 0; i < coords.Count; i++) {
-            vertices.Add(new List<List<Vector2>>());
-            // Iterating thru rings
-            for (int j = 0; j < coords[i].Count; j++) {
-                vertices[i].Add(new List<Vector2>());
-                // Iterating thru coordinates
-                for (int k = 0; k < coords[i][j].Count; k++) {
-                    vertices[i][j].Add(new Vector2(coords[i][j][k][0], coords[i][j][k][1]));
-                }
-                Utils.JSONPolygonRingIsValid(vertices[i][j]);
-                vertices[i][j].RemoveAt(vertices[i][j].Count - 1);
-            }
-        }
-
-        RedoMesh(gameObject, vertices);
-    }
-
 }
