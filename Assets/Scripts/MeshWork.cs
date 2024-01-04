@@ -36,7 +36,7 @@ public static class MeshWork {
         return res;
     }
 
-    public static void RedoMesh (GameObject gameObject, List<List<List<Vector2>>> vertices) {
+    static void RedoMesh2DOneSided (GameObject gameObject, List<List<List<Vector2>>> vertices) {
         // Given: a MultiPolygon representation of the desired mesh, but
         // with Vector2s.
 
@@ -63,19 +63,18 @@ public static class MeshWork {
         meshCollider.sharedMesh = mesh;
     }
 
-    public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g) {
+    public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g, float width) {
         List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.coordinates[0]);
         Utils.JSONPolygonRingIsValid(vertices);
         List<Vector2> newVertices = new List<Vector2>(vertices);
         newVertices.RemoveAt(newVertices.Count - 1);
-        // RedoMesh(gameObject, newVertices);
         List<List<List<Vector2>>> multiPolygonForm = new List<List<List<Vector2>>>();
         multiPolygonForm.Add(new List<List<Vector2>>());
         multiPolygonForm[0].Add(newVertices);
-        RedoMesh(gameObject, multiPolygonForm);
+        RedoMesh(gameObject, multiPolygonForm, width);
     }
 
-    public static void RedoMesh (GameObject gameObject, GJMultiPolygonGeometry g) {
+    public static void RedoMesh (GameObject gameObject, GJMultiPolygonGeometry g, float width) {
 
         List<List<List<Vector2>>> vertices = new List<List<List<Vector2>>>();
         List<List<List<List<float>>>> coords = g.coordinates;
@@ -95,15 +94,21 @@ public static class MeshWork {
             }
         }
 
-        // RedoMesh(gameObject, vertices);
-        RedoMeshAndMakeIt3D(gameObject, vertices, 5); // temporary
+        RedoMesh(gameObject, vertices, width);
     }
 
-    public static void RedoMeshAndMakeIt3D (GameObject gameObject, List<List<List<Vector2>>> vertices, float width) {
+    public static void RedoMesh (GameObject gameObject, List<List<List<Vector2>>> vertices, float width) {
         // Given: a MultiPolygon representation of the desired mesh, but
         // with Vector2s.
 
-        if (width < 0) throw new Exception("Width must be a positive number!");
+        // Width negative: 2D mesh with one side transparent.
+        // Width 0: 2D mesh with both sides solid.
+        // Width positive: 3D prism mesh with face(s)s described by [vertices].
+
+        if (width < 0) {
+            RedoMesh2DOneSided(gameObject, vertices);
+            return;
+        }
 
         List<Vector2> newVertices = new List<Vector2>();
         List<int> newTriangles = new List<int>();
@@ -127,7 +132,7 @@ public static class MeshWork {
             if (i < halfTotalVertices) {
                 allVerticesArr[i] = new Vector3(newVertices[i].x, newVertices[i].y, 0);
             } else {
-                allVerticesArr[i] = new Vector3(newVertices[i - halfTotalVertices].x, newVertices[i - halfTotalVertices].y, 10);
+                allVerticesArr[i] = new Vector3(newVertices[i - halfTotalVertices].x, newVertices[i - halfTotalVertices].y, width);
             }
         }
 
