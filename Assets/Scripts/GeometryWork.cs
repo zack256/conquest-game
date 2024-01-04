@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GeometryWork
 {
-    static int Mod (int a, int b) {
+    public static int Mod (int a, int b) {
         int r = a % b;
         return r < 0 ? r + b : r;
     }
