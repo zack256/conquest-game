@@ -36,6 +36,23 @@ public static class MeshWork {
         return res;
     }
 
+    static Vector3 NormalOfTriangle (Vector3 A, Vector3 B, Vector3 C) {
+        // Assumes triangle goes A -> B -> C.
+        Vector3 AB = B - A;
+        Vector3 BC = C - B;
+        return Vector3.Cross(AB, BC);
+    }
+
+    static int CheckTriangleAndReturnThirdVertex (int AIdx, int BIdx, int CIdx, int pointIdx, int neighborIdx) {
+        if (AIdx == pointIdx && BIdx == neighborIdx) return CIdx;
+        if (AIdx == pointIdx && CIdx == neighborIdx) return BIdx;
+        if (BIdx == pointIdx && AIdx == neighborIdx) return CIdx;
+        if (BIdx == pointIdx && CIdx == neighborIdx) return AIdx;
+        if (CIdx == pointIdx && AIdx == neighborIdx) return BIdx;
+        if (CIdx == pointIdx && BIdx == neighborIdx) return AIdx;
+        return -1;
+    }
+
     static void RedoMesh2DOneSided (GameObject gameObject, List<List<List<Vector2>>> vertices) {
         // Given: a MultiPolygon representation of the desired mesh, but
         // with Vector2s.
@@ -152,13 +169,55 @@ public static class MeshWork {
         for (int i = 0; i < vertices.Count; i++) {
             int numVerticesForThisPolygon = vertices[i][0].Count;
             for (int j = 0; j < numVerticesForThisPolygon; j++) {
-                // These look like the correct orientations.
-                newTriangles.Add(numVerticesCovered + j);
-                newTriangles.Add(numVerticesCovered + GeometryWork.Mod(j + 1, numVerticesForThisPolygon));
-                newTriangles.Add(numVerticesCovered + j + halfTotalVertices);
-                newTriangles.Add(numVerticesCovered + j + halfTotalVertices);
-                newTriangles.Add(numVerticesCovered + GeometryWork.Mod(j + 1, numVerticesForThisPolygon));
-                newTriangles.Add(numVerticesCovered + GeometryWork.Mod(j + 1, numVerticesForThisPolygon) + halfTotalVertices);
+
+                int pointIdx = numVerticesCovered + j;
+                int neighborIdx = numVerticesCovered + GeometryWork.Mod(j + 1, numVerticesForThisPolygon);
+                int acrossIdx = pointIdx + halfTotalVertices;
+                int diagIdx = neighborIdx + halfTotalVertices;
+                int thirdIdx = -1;
+
+                for (int k = 0; k < newTriangles.Count; k += 3) {
+                    thirdIdx = CheckTriangleAndReturnThirdVertex(
+                        newTriangles[k],
+                        newTriangles[k + 1],
+                        newTriangles[k + 2],
+                        pointIdx,
+                        neighborIdx);
+                    if (thirdIdx != -1) break;
+                }
+
+                if (thirdIdx == -1) throw new Exception("Something went wrong, can't find the third vertex?");
+                    
+                Vector3 A = allVerticesArr[pointIdx];
+                Vector3 E = allVerticesArr[thirdIdx];
+                Vector3 AE = E - A;
+
+                Vector3 n;
+                float cosTheta;
+
+                n = NormalOfTriangle(allVerticesArr[pointIdx], allVerticesArr[neighborIdx], allVerticesArr[acrossIdx]);
+                cosTheta = (Vector3.Dot(AE, n)) / (AE.magnitude * n.magnitude);
+                if (cosTheta > 0) {
+                    newTriangles.Add(pointIdx);
+                    newTriangles.Add(acrossIdx);
+                    newTriangles.Add(neighborIdx);
+                } else {
+                    newTriangles.Add(pointIdx);
+                    newTriangles.Add(neighborIdx);
+                    newTriangles.Add(acrossIdx);
+                }
+
+                n = NormalOfTriangle(allVerticesArr[acrossIdx], allVerticesArr[neighborIdx], allVerticesArr[diagIdx]);
+                cosTheta = (Vector3.Dot(AE, n)) / (AE.magnitude * n.magnitude);
+                if (cosTheta > 0) {
+                    newTriangles.Add(acrossIdx);
+                    newTriangles.Add(diagIdx);
+                    newTriangles.Add(neighborIdx);
+                } else {
+                    newTriangles.Add(acrossIdx);
+                    newTriangles.Add(neighborIdx);
+                    newTriangles.Add(diagIdx);
+                }
             }
             numVerticesCovered += numVerticesForThisPolygon;
         }
