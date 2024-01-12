@@ -18,8 +18,11 @@ public class GJMultiPolygonGeometry {
 
 public class GJFeature {
     public string type;
+
+    // Swap between accepting Polygon vs. MultiPolygon.
     // public GJPolygonGeometry geometry;
     public GJMultiPolygonGeometry geometry;
+
 }
 
 public class GJObj {

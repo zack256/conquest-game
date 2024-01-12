@@ -81,42 +81,6 @@ public static class MeshWork {
         meshCollider.sharedMesh = mesh;
     }
 
-    /**
-    public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g, float width) {
-        List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.coordinates[0]);
-        Utils.JSONPolygonRingIsValid(vertices);
-        List<Vector2> newVertices = new List<Vector2>(vertices);
-        newVertices.RemoveAt(newVertices.Count - 1);
-        List<List<List<Vector2>>> multiPolygonForm = new List<List<List<Vector2>>>();
-        multiPolygonForm.Add(new List<List<Vector2>>());
-        multiPolygonForm[0].Add(newVertices);
-        RedoMesh(gameObject, multiPolygonForm, width);
-    }
-
-    public static void RedoMesh (GameObject gameObject, GJMultiPolygonGeometry g, float width) {
-
-        List<List<List<Vector2>>> vertices = new List<List<List<Vector2>>>();
-        List<List<List<List<float>>>> coords = g.coordinates;
-
-        // Iterating thru polygons
-        for (int i = 0; i < coords.Count; i++) {
-            vertices.Add(new List<List<Vector2>>());
-            // Iterating thru rings
-            for (int j = 0; j < coords[i].Count; j++) {
-                vertices[i].Add(new List<Vector2>());
-                // Iterating thru coordinates
-                for (int k = 0; k < coords[i][j].Count; k++) {
-                    vertices[i][j].Add(new Vector2(coords[i][j][k][0], coords[i][j][k][1]));
-                }
-                Utils.JSONPolygonRingIsValid(vertices[i][j]);
-                vertices[i][j].RemoveAt(vertices[i][j].Count - 1);
-            }
-        }
-
-        RedoMesh(gameObject, vertices, width);
-    }
-    **/
-
     public static void RedoMesh (GameObject gameObject, MultiPolygon multiPolygon, float width) {
         // Given: a MultiPolygon representation of the desired mesh
 
