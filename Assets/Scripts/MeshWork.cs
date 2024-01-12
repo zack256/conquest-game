@@ -53,9 +53,10 @@ public static class MeshWork {
         return -1;
     }
 
-    static void RedoMesh2DOneSided (GameObject gameObject, List<List<List<Vector2>>> vertices) {
-        // Given: a MultiPolygon representation of the desired mesh, but
-        // with Vector2s.
+    static void RedoMesh2DOneSided (GameObject gameObject, MultiPolygon multiPolygon) {
+        // Given: a MultiPolygon representation of the desired mesh
+
+        List<List<List<Vector2>>> vertices = multiPolygon.coordinates;
 
         List<Vector2> newVertices = new List<Vector2>();
         List<int> newTriangles = new List<int>();
@@ -80,6 +81,7 @@ public static class MeshWork {
         meshCollider.sharedMesh = mesh;
     }
 
+    /**
     public static void RedoMesh (GameObject gameObject, GJPolygonGeometry g, float width) {
         List<Vector2> vertices =  Utils.FloatCoordinatesToVector2List(g.coordinates[0]);
         Utils.JSONPolygonRingIsValid(vertices);
@@ -113,19 +115,21 @@ public static class MeshWork {
 
         RedoMesh(gameObject, vertices, width);
     }
+    **/
 
-    public static void RedoMesh (GameObject gameObject, List<List<List<Vector2>>> vertices, float width) {
-        // Given: a MultiPolygon representation of the desired mesh, but
-        // with Vector2s.
+    public static void RedoMesh (GameObject gameObject, MultiPolygon multiPolygon, float width) {
+        // Given: a MultiPolygon representation of the desired mesh
 
         // Width negative: 2D mesh with one side transparent.
         // Width 0: 2D mesh with both sides solid.
         // Width positive: 3D prism mesh with face(s)s described by [vertices].
 
         if (width < 0) {
-            RedoMesh2DOneSided(gameObject, vertices);
+            RedoMesh2DOneSided(gameObject, multiPolygon);
             return;
         }
+
+        List<List<List<Vector2>>> vertices = multiPolygon.coordinates;
 
         List<Vector2> newVertices = new List<Vector2>();
         List<int> newTriangles = new List<int>();
@@ -163,63 +167,65 @@ public static class MeshWork {
             newTriangles.Add(newTriangles[halfT - i - 1] + halfTotalVertices);
         }
 
-        // Connects the two faces(s) of the prism(s). For a corresponding side,
-        // we'll need two triangles to make up a rectangle.
-        int numVerticesCovered = 0;
-        for (int i = 0; i < vertices.Count; i++) {
-            int numVerticesForThisPolygon = vertices[i][0].Count;
-            for (int j = 0; j < numVerticesForThisPolygon; j++) {
+        if (width != 0) {
+            // Connects the two faces(s) of the prism(s). For a corresponding side,
+            // we'll need two triangles to make up a rectangle.
+            int numVerticesCovered = 0;
+            for (int i = 0; i < vertices.Count; i++) {
+                int numVerticesForThisPolygon = vertices[i][0].Count;
+                for (int j = 0; j < numVerticesForThisPolygon; j++) {
 
-                int pointIdx = numVerticesCovered + j;
-                int neighborIdx = numVerticesCovered + GeometryWork.Mod(j + 1, numVerticesForThisPolygon);
-                int acrossIdx = pointIdx + halfTotalVertices;
-                int diagIdx = neighborIdx + halfTotalVertices;
-                int thirdIdx = -1;
+                    int pointIdx = numVerticesCovered + j;
+                    int neighborIdx = numVerticesCovered + GeometryWork.Mod(j + 1, numVerticesForThisPolygon);
+                    int acrossIdx = pointIdx + halfTotalVertices;
+                    int diagIdx = neighborIdx + halfTotalVertices;
+                    int thirdIdx = -1;
 
-                for (int k = 0; k < newTriangles.Count; k += 3) {
-                    thirdIdx = CheckTriangleAndReturnThirdVertex(
-                        newTriangles[k],
-                        newTriangles[k + 1],
-                        newTriangles[k + 2],
-                        pointIdx,
-                        neighborIdx);
-                    if (thirdIdx != -1) break;
+                    for (int k = 0; k < newTriangles.Count; k += 3) {
+                        thirdIdx = CheckTriangleAndReturnThirdVertex(
+                            newTriangles[k],
+                            newTriangles[k + 1],
+                            newTriangles[k + 2],
+                            pointIdx,
+                            neighborIdx);
+                        if (thirdIdx != -1) break;
+                    }
+
+                    if (thirdIdx == -1) throw new Exception("Something went wrong, can't find the third vertex?");
+                        
+                    Vector3 A = allVerticesArr[pointIdx];
+                    Vector3 E = allVerticesArr[thirdIdx];
+                    Vector3 AE = E - A;
+
+                    Vector3 n;
+                    float cosTheta;
+
+                    n = NormalOfTriangle(allVerticesArr[pointIdx], allVerticesArr[neighborIdx], allVerticesArr[acrossIdx]);
+                    cosTheta = (Vector3.Dot(AE, n)) / (AE.magnitude * n.magnitude);
+                    if (cosTheta > 0) {
+                        newTriangles.Add(pointIdx);
+                        newTriangles.Add(acrossIdx);
+                        newTriangles.Add(neighborIdx);
+                    } else {
+                        newTriangles.Add(pointIdx);
+                        newTriangles.Add(neighborIdx);
+                        newTriangles.Add(acrossIdx);
+                    }
+
+                    n = NormalOfTriangle(allVerticesArr[acrossIdx], allVerticesArr[neighborIdx], allVerticesArr[diagIdx]);
+                    cosTheta = (Vector3.Dot(AE, n)) / (AE.magnitude * n.magnitude);
+                    if (cosTheta > 0) {
+                        newTriangles.Add(acrossIdx);
+                        newTriangles.Add(diagIdx);
+                        newTriangles.Add(neighborIdx);
+                    } else {
+                        newTriangles.Add(acrossIdx);
+                        newTriangles.Add(neighborIdx);
+                        newTriangles.Add(diagIdx);
+                    }
                 }
-
-                if (thirdIdx == -1) throw new Exception("Something went wrong, can't find the third vertex?");
-                    
-                Vector3 A = allVerticesArr[pointIdx];
-                Vector3 E = allVerticesArr[thirdIdx];
-                Vector3 AE = E - A;
-
-                Vector3 n;
-                float cosTheta;
-
-                n = NormalOfTriangle(allVerticesArr[pointIdx], allVerticesArr[neighborIdx], allVerticesArr[acrossIdx]);
-                cosTheta = (Vector3.Dot(AE, n)) / (AE.magnitude * n.magnitude);
-                if (cosTheta > 0) {
-                    newTriangles.Add(pointIdx);
-                    newTriangles.Add(acrossIdx);
-                    newTriangles.Add(neighborIdx);
-                } else {
-                    newTriangles.Add(pointIdx);
-                    newTriangles.Add(neighborIdx);
-                    newTriangles.Add(acrossIdx);
-                }
-
-                n = NormalOfTriangle(allVerticesArr[acrossIdx], allVerticesArr[neighborIdx], allVerticesArr[diagIdx]);
-                cosTheta = (Vector3.Dot(AE, n)) / (AE.magnitude * n.magnitude);
-                if (cosTheta > 0) {
-                    newTriangles.Add(acrossIdx);
-                    newTriangles.Add(diagIdx);
-                    newTriangles.Add(neighborIdx);
-                } else {
-                    newTriangles.Add(acrossIdx);
-                    newTriangles.Add(neighborIdx);
-                    newTriangles.Add(diagIdx);
-                }
+                numVerticesCovered += numVerticesForThisPolygon;
             }
-            numVerticesCovered += numVerticesForThisPolygon;
         }
 
         Mesh mesh = gameObject.GetComponent<MeshFilter>().mesh;
